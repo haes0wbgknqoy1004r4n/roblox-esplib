@@ -179,6 +179,8 @@ end
 
 -----------------
 
+local unloaded = false
+
 function esplib.isFriendly(player)
 	return player.Team and player.Team == localPlayer.Team;
 end
@@ -207,6 +209,8 @@ end
 local chamsconnections = {}
 
 function esplib.new(player)
+	if unloaded then return end
+	
 	assert(player)
 	local character = player.Character
 	assert(character, 'no character!!!')
@@ -463,8 +467,11 @@ function connectplayer(player)
 	end)
 end
 
+local renderConnection
+local pladdedConnection
+
 function esplib:Init()
-	players.PlayerAdded:Connect(function(player)
+	pladdedConnection = players.PlayerAdded:Connect(function(player)
 		connectplayer(player)
 	end);
 	
@@ -478,9 +485,33 @@ function esplib:Init()
 		end
 	end
 
-	runService.RenderStepped:Connect(esplib.update)
+	renderConnection = runService.RenderStepped:Connect(esplib.update)
 
 	playerframe.Visible = false
+end
+
+function esplib:Unload()
+	for _, player in pairs(players:GetChildren()) do
+		esplib.remove(player)
+	end
+	
+	esplib.container:Destroy()
+	esplib.chamsmodels:Destroy()
+	esplib.chamscontainer:Destroy()
+	
+	unloaded = true
+	
+	if renderConnection and renderConnection.Connected then
+		renderConnection:Disconnect()
+	end
+	
+	renderConnection = nil
+	
+	if pladdedConnection and pladdedConnection.Connected then
+		pladdedConnection:Disconnect()
+	end
+	
+	pladdedConnection = nil
 end
 
 -------------------------------
