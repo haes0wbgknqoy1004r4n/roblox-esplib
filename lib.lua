@@ -111,6 +111,23 @@ local function parseColor(self, color, isOutline)
 	return color;
 end
 
+local function drawLine(frame, point1, point2, thickness)
+	local deltaX = point2.X - point1.X
+	local deltaY = point2.Y - point1.Y
+
+	local length = math.sqrt(deltaX^2 + deltaY^2)
+
+	local angle = math.atan2(deltaY, deltaX)
+
+	local centerX = (point1.X + point2.X) / 2
+	local centerY = (point1.Y + point2.Y) / 2
+
+	frame.Size = UDim2.new(0, length, 0, thickness)
+	frame.Position = UDim2.new(0, centerX, 0, centerY)
+	frame.AnchorPoint = Vector2.new(0.5, 0.5)
+	frame.Rotation = math.deg(angle)
+end
+
 -----------------------------------------------------------------------------------------------
 
 local maincont
@@ -128,6 +145,7 @@ local esplib = {
 	container = Instance.new("Folder", maincont),
 	chamscontainer = Instance.new("Folder", maincont),
 	chamsmodels = Instance.new("Folder", workspace),
+	skeletoncontainer = Instance.new("Folder", maincont),
 	settings = {
 		friendly = {
 			enabled = true,
@@ -144,6 +162,9 @@ local esplib = {
 			unvisibleChamsEnabled = true,
 			unvisibleChamsFill = {Color3.fromRGB(255, 0, 0), 0.5},
 			unvisibleChamsOutline = {Color3.fromRGB(0, 0, 0), 0.7},
+			skeletonEnabled = true,
+			skeletonThickness = 1,
+			skeletonColor = {Color3.fromRGB(255, 255, 255), 0.5}
 		},
 		enemies = {
 			enabled = true,
@@ -160,6 +181,9 @@ local esplib = {
 			unvisibleChamsEnabled = true,
 			unvisibleChamsFill = {Color3.fromRGB(255, 0, 0), 0.5},
 			unvisibleChamsOutline = {Color3.fromRGB(0, 0, 0), 0.7},
+			skeletonEnabled = true,
+			skeletonThickness = 2,
+			skeletonColor = {Color3.fromRGB(255, 255, 255), 0.5}
 		},
 	}
 }
@@ -169,6 +193,7 @@ maincont.Name = 'yesplib'
 esplib.chamsmodels.Name = "chams_models"
 esplib.container.Name = 'container'
 esplib.chamscontainer.Name = 'chams'
+esplib.skeletoncontainer.Name = "skeleton"
 
 local playerframe
 
@@ -242,8 +267,6 @@ function esplib.new(player)
 	normalchams.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 	normalchams.Adornee = normalchamsmodel
 	
-	
-	
 	chamsconnections[player.Name] = {}
 	
 	for _, part in ipairs(character:GetChildren()) do
@@ -280,6 +303,43 @@ function esplib.new(player)
 			table.insert(chamsconnections[player.Name], connection)
 		end
 	end
+	
+	local skeletonFolder = Instance.new("Folder")
+	skeletonFolder.Parent = esplib.skeletoncontainer
+	skeletonFolder.Name = player.Name
+	
+	local points = {}
+	
+	if character.Humanoid.RigType == Enum.HumanoidRigType.R15 then
+		points = {
+			Head = character:WaitForChild("Head"),
+			UpperTorso = character:WaitForChild("UpperTorso"),
+			LowerTorso = character:WaitForChild("LowerTorso"),
+			LeftUpperArm = character:WaitForChild("LeftUpperArm"),
+			LeftLowerArm = character:WaitForChild("LeftLowerArm"),
+			RightUpperArm = character:WaitForChild("RightUpperArm"),
+			RightLowerArm = character:WaitForChild("RightLowerArm"),
+			LeftUpperLeg = character:WaitForChild("LeftUpperLeg"),
+			LeftLowerLeg = character:WaitForChild("LeftLowerLeg"),
+			RightUpperLeg = character:WaitForChild("RightUpperLeg"),
+			RightLowerLeg = character:WaitForChild("RightLowerLeg"),
+		}
+	elseif character.Humanoid.RigType == Enum.HumanoidRigType.R6 then
+		points = {
+			Head = character:WaitForChild("Head"),
+			Torso = character:WaitForChild("Torso"),
+			LeftArm = character:WaitForChild("Left Arm"),
+			RightArm = character:WaitForChild("Right Arm"),
+			LeftLeg = character:WaitForChild("Left Leg"),
+			RightLeg = character:WaitForChild("Right Leg"),
+		}
+	end
+	
+	for i, v in pairs(points) do
+		local line = Instance.new("Frame")
+		line.Parent = skeletonFolder
+		line.Name = i
+	end
 end
 
 function esplib.getMain(player)
@@ -308,6 +368,9 @@ function esplib.remove(player)
 	end
 	
 	chamsconnections[player.Name] = nil
+	
+	local skeletonfolder = esplib.skeletoncontainer:FindFirstChild(player.Name)
+	if skeletonfolder ~= nil then skeletonfolder:Destroy() end
 end
 
 function esplib.update()
@@ -347,94 +410,99 @@ function esplib.update()
 		
 		if not onScreen then
 			main.Visible = false
-			continue
-		end
-		
-		local cache = {}
-		local children = getChildren(character);
-
-		for i = 1, #children do
-			local part = children[i];
-			if isA(part, "BasePart") and isBodyPart(part.Name) then
-				cache[#cache + 1] = part;
-			end
-		end
-
-		local corners = calculateCorners(getBoundingBox(cache));
-		local position = UDim2.new(0, corners.topLeft.X, 0, corners.topLeft.Y)
-		local size =  UDim2.new(0, corners.bottomRight.X - corners.topLeft.X, 0, corners.bottomRight.Y - corners.topLeft.Y)
-		
-		main.Position = position
-		main.Size = size
-		
-		local boxColor = main:FindFirstChild('box') and main:FindFirstChild('box'):FindFirstChild('UIStroke')
-		if boxColor then
-			boxColor.Color = espsetts.boxColor
-			boxColor.Enabled = espsetts.boxEnabled
-		end
-		
-		local boxStroke = main:FindFirstChild('stroke') and main:FindFirstChild('stroke'):FindFirstChild("UIStroke")
-		if boxStroke then
-			boxStroke.Enabled = espsetts.boxEnabled
-		end
-		
-		local top = main:FindFirstChild('top')
-		local right = main:FindFirstChild('right')
-		local bottom = main:FindFirstChild('bottom')
-		
-		if top then
-			local username = top:FindFirstChild("username")
+		else
+			----- box and widgets
 			
-			if username then
-				username.Visible = espsetts.nameEnabled
-				
-				for _, label in pairs(username:GetChildren()) do
-					label.Text = player.DisplayName
+			local cache = {}
+			local children = getChildren(character);
+
+			for i = 1, #children do
+				local part = children[i];
+				if isA(part, "BasePart") and isBodyPart(part.Name) then
+					cache[#cache + 1] = part;
 				end
 			end
-		end
-		
-		if right then
-			local frnd = right:FindFirstChild("frnd")
-			
-			if frnd then
-				frnd.Visible = espsetts.frndWidget and esplib.isFrnd(player)
-			end
-		end
-		
-		if bottom then
-			local distance = bottom:FindFirstChild("distance")
 
-			if distance then
-				distance.Visible = espsetts.distanceWidget
+			local corners = calculateCorners(getBoundingBox(cache));
+			local position = UDim2.new(0, corners.topLeft.X, 0, corners.topLeft.Y)
+			local size =  UDim2.new(0, corners.bottomRight.X - corners.topLeft.X, 0, corners.bottomRight.Y - corners.topLeft.Y)
+
+			main.Position = position
+			main.Size = size
+
+			local boxColor = main:FindFirstChild('box') and main:FindFirstChild('box'):FindFirstChild('UIStroke')
+			if boxColor then
+				boxColor.Color = espsetts.boxColor
+				boxColor.Enabled = espsetts.boxEnabled
 			end
-		end
-		
-		local healthbar = main:FindFirstChild('healthbar')
-		
-		if healthbar then
-			healthbar.Visible = espsetts.healthbarEnabled
-			
-			local health, maxHealth = esplib.getHealth(player)
-			local fill = healthbar:FindFirstChild('fill')
-			
-			if fill then
-				TweenService:Create(fill, TweenInfo.new(0.3, Enum.EasingStyle.Quad), { Size = UDim2.new(1, 0, health/maxHealth, 0) }):Play()
-				
-				local stroke1, stroke2 = fill:FindFirstChild('UIStroke'), fill:FindFirstChild("stroke"):FindFirstChild('UIStroke')
-				
-				stroke1.Color = espsetts.healthbarfill
-				stroke2.Color = espsetts.healthbarfill
-				
-				fill.BackgroundColor3 = espsetts.healthbarfill
-				
-				local labels = { fill:FindFirstChild('original'), fill:FindFirstChild("2"), fill:FindFirstChild("3") }
-				
-				for _, label in pairs(labels) do
-					label.Text = health
+
+			local boxStroke = main:FindFirstChild('stroke') and main:FindFirstChild('stroke'):FindFirstChild("UIStroke")
+			if boxStroke then
+				boxStroke.Enabled = espsetts.boxEnabled
+			end
+
+			local top = main:FindFirstChild('top')
+			local right = main:FindFirstChild('right')
+			local bottom = main:FindFirstChild('bottom')
+
+			if top then
+				local username = top:FindFirstChild("username")
+
+				if username then
+					username.Visible = espsetts.nameEnabled
+
+					for _, label in pairs(username:GetChildren()) do
+						label.Text = player.DisplayName
+					end
 				end
 			end
+
+			if right then
+				local frnd = right:FindFirstChild("frnd")
+
+				if frnd then
+					frnd.Visible = espsetts.frndWidget and esplib.isFrnd(player)
+				end
+			end
+
+			if bottom then
+				local distance = bottom:FindFirstChild("distance")
+
+				if distance then
+					distance.Visible = espsetts.distanceWidget
+				end
+			end
+
+			local healthbar = main:FindFirstChild('healthbar')
+
+			if healthbar then
+				healthbar.Visible = espsetts.healthbarEnabled
+
+				local health, maxHealth = esplib.getHealth(player)
+				local fill = healthbar:FindFirstChild('fill')
+
+				if fill then
+					TweenService:Create(fill, TweenInfo.new(0.3, Enum.EasingStyle.Quad), { Size = UDim2.new(1, 0, health/maxHealth, 0) }):Play()
+
+					local stroke1, stroke2 = fill:FindFirstChild('UIStroke'), fill:FindFirstChild("stroke"):FindFirstChild('UIStroke')
+
+					stroke1.Color = espsetts.healthbarfill
+					stroke2.Color = espsetts.healthbarfill
+
+					fill.BackgroundColor3 = espsetts.healthbarfill
+
+					local labels = { fill:FindFirstChild('original'), fill:FindFirstChild("2"), fill:FindFirstChild("3") }
+
+					for _, label in pairs(labels) do
+						label.Text = health
+					end
+				end
+			end
+			
+			----- box and widgets
 		end
+		
+		----- chams
 		
 		local visiblechams = esplib.chamscontainer:FindFirstChild(player.Name) and esplib.chamscontainer:FindFirstChild(player.Name):FindFirstChild("chams")
 		local unvisiblechams = esplib.chamsmodels:FindFirstChild(player.Name) and esplib.chamsmodels:FindFirstChild(player.Name):FindFirstChild("chams")
@@ -453,6 +521,78 @@ function esplib.update()
 			unvisiblechams.FillTransparency = espsetts.unvisibleChamsFill[2]
 			unvisiblechams.OutlineColor = espsetts.unvisibleChamsOutline[1]
 			unvisiblechams.OutlineTransparency = espsetts.unvisibleChamsOutline[2]
+		end
+		
+		-- skeleton -------------------------------------------------------------
+		
+		local skeletonfolder = esplib.skeletoncontainer:FindFirstChild(player.Name)
+		
+		if skeletonfolder then
+			local connections = {}
+			
+			if character.Humanoid.RigType == Enum.HumanoidRigType.R15 then
+				connections = {
+					{'Head', 'UpperTorso'},
+					{'UpperTorso', 'LowerTorso'},
+					{'UpperTorso', 'LeftUpperArm'},
+					{'LeftUpperArm', 'LeftLowerArm'},
+					{'UpperTorso', 'RightUpperArm'},
+					{'RightUpperArm', 'RightLowerArm'},
+					{'LowerTorso', 'LeftUpperLeg'},
+					{'LeftUpperLeg', 'LeftLowerLeg'},
+					{'LowerTorso', 'RightUpperLeg'},
+					{'RightUpperLeg', 'RightLowerLeg'},
+				}
+			elseif character.Humanoid.RigType == Enum.HumanoidRigType.R6 then
+				connections = {
+					{'Head', 'Torso'},
+					{'Torso', 'LeftArm'},
+					{'Torso', 'RightArm'},
+					{'Torso', 'LeftLeg'},
+					{'Torso', 'RightLeg'},
+				}
+			end
+			
+			for _, connection in ipairs(connections) do
+				local point1 = skeletonfolder:FindFirstChild(connection[1])
+				local point2 = skeletonfolder:FindFirstChild(connection[2])
+
+				if point1 and point2 and espsetts.skeletonEnabled then
+					pcall(function()
+						
+						point1.BackgroundColor3 = espsetts.skeletonColor[1]
+						point1.BackgroundTransparency = espsetts.skeletonColor[2]
+
+						point2.BackgroundColor3 = espsetts.skeletonColor[1]
+						point2.BackgroundTransparency = espsetts.skeletonColor[2]
+
+						local part1 = character:FindFirstChild(point1.Name)
+						local part2 = character:FindFirstChild(point2.Name)
+
+						if part1 and part2 then
+							local screenPos1, onScreen1, depth1 = worldToScreen(part1.Position);
+							local screenPos2, onScreen2, depth2 = worldToScreen(part2.Position);
+
+							--if onScreen1 then
+
+							--end
+
+							drawLine(point2, screenPos1, screenPos2, espsetts.skeletonThickness)
+
+							point1.Visible = true
+							point2.Visible = true
+						else
+							point1.Visible = false			
+						end
+						
+					end)
+				else
+					pcall(function()
+						point1.Visible = false
+						point2.Visible = false
+					end)
+				end
+			end
 		end
 	end
 end
