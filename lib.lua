@@ -147,6 +147,7 @@ local esplib = {
 	chamsmodels = Instance.new("Folder", workspace),
 	skeletoncontainer = Instance.new("Folder", maincont),
 	settings = {
+		renderself = false,
 		friendly = {
 			enabled = true,
 			boxEnabled = true,
@@ -156,13 +157,13 @@ local esplib = {
 			nameEnabled = true,
 			frndWidget = true,
 			distanceWidget = false,
-			visibleChamsEnabled = true,
+			visibleChamsEnabled = false,
 			visibleChamsFill = {Color3.fromRGB(0, 255, 0), 0.5},
 			visibleChamsOutline = {Color3.fromRGB(0, 0, 0), 0.7},
-			unvisibleChamsEnabled = true,
+			unvisibleChamsEnabled = false,
 			unvisibleChamsFill = {Color3.fromRGB(255, 0, 0), 0.5},
 			unvisibleChamsOutline = {Color3.fromRGB(0, 0, 0), 0.7},
-			skeletonEnabled = true,
+			skeletonEnabled = false,
 			skeletonThickness = 1,
 			skeletonColor = {Color3.fromRGB(255, 255, 255), 0.5}
 		},
@@ -171,17 +172,17 @@ local esplib = {
 			boxEnabled = true,
 			boxColor = Color3.fromRGB(255, 0, 0),
 			healthbarEnabled = true,
-			healthbarfill = Color3.fromRGB(0, 255, 0),
+			healthbarfill = Color3.fromRGB(0, 255, 0), 
 			nameEnabled = true,
 			frndWidget = true,
 			distanceWidget = false,
-			visibleChamsEnabled = true,
+			visibleChamsEnabled = false,
 			visibleChamsFill = {Color3.fromRGB(0, 255, 0), 0.5},
 			visibleChamsOutline = {Color3.fromRGB(0, 0, 0), 0.7},
-			unvisibleChamsEnabled = true,
+			unvisibleChamsEnabled = false,
 			unvisibleChamsFill = {Color3.fromRGB(255, 0, 0), 0.5},
 			unvisibleChamsOutline = {Color3.fromRGB(0, 0, 0), 0.7},
-			skeletonEnabled = true,
+			skeletonEnabled = false,
 			skeletonThickness = 2,
 			skeletonColor = {Color3.fromRGB(255, 255, 255), 0.5}
 		},
@@ -239,8 +240,9 @@ function esplib.new(player)
 	if unloaded then return end
 	
 	assert(player)
+	
 	local character = player.Character
-	assert(character, 'no character!!!')
+	if not character then return end
 	
 	local main = playerframe:Clone()
 	main.Parent = esplib.container
@@ -289,7 +291,7 @@ function esplib.new(player)
 			end)
 			
 			local connection = runService.RenderStepped:Connect(function()
-				if head:IsDescendantOf(workspace) then
+				if head:IsDescendantOf(workspace) and esplib.settings.friendly.visibleChamsEnabled and esplib.settings.enemies.visibleChamsEnabled then
 					pcall(function()
 						clone.CFrame = part.CFrame
 						clone.Size = part.Size
@@ -310,35 +312,41 @@ function esplib.new(player)
 	
 	local points = {}
 	
-	if character.Humanoid.RigType == Enum.HumanoidRigType.R15 then
-		points = {
-			Head = character:WaitForChild("Head"),
-			UpperTorso = character:WaitForChild("UpperTorso"),
-			LowerTorso = character:WaitForChild("LowerTorso"),
-			LeftUpperArm = character:WaitForChild("LeftUpperArm"),
-			LeftLowerArm = character:WaitForChild("LeftLowerArm"),
-			RightUpperArm = character:WaitForChild("RightUpperArm"),
-			RightLowerArm = character:WaitForChild("RightLowerArm"),
-			LeftUpperLeg = character:WaitForChild("LeftUpperLeg"),
-			LeftLowerLeg = character:WaitForChild("LeftLowerLeg"),
-			RightUpperLeg = character:WaitForChild("RightUpperLeg"),
-			RightLowerLeg = character:WaitForChild("RightLowerLeg"),
-		}
-	elseif character.Humanoid.RigType == Enum.HumanoidRigType.R6 then
-		points = {
-			Head = character:WaitForChild("Head"),
-			Torso = character:WaitForChild("Torso"),
-			LeftArm = character:WaitForChild("Left Arm"),
-			RightArm = character:WaitForChild("Right Arm"),
-			LeftLeg = character:WaitForChild("Left Leg"),
-			RightLeg = character:WaitForChild("Right Leg"),
-		}
-	end
-	
-	for i, v in pairs(points) do
-		local line = Instance.new("Frame")
-		line.Parent = skeletonFolder
-		line.Name = i
+	local humexists = pcall(function()
+		return character.Humanoid
+	end)
+
+	if character and humexists then
+		if character.Humanoid.RigType == Enum.HumanoidRigType.R15 then
+			points = {
+				Head = character:WaitForChild("Head"),
+				UpperTorso = character:WaitForChild("UpperTorso"),
+				LowerTorso = character:WaitForChild("LowerTorso"),
+				LeftUpperArm = character:WaitForChild("LeftUpperArm"),
+				LeftLowerArm = character:WaitForChild("LeftLowerArm"),
+				RightUpperArm = character:WaitForChild("RightUpperArm"),
+				RightLowerArm = character:WaitForChild("RightLowerArm"),
+				LeftUpperLeg = character:WaitForChild("LeftUpperLeg"),
+				LeftLowerLeg = character:WaitForChild("LeftLowerLeg"),
+				RightUpperLeg = character:WaitForChild("RightUpperLeg"),
+				RightLowerLeg = character:WaitForChild("RightLowerLeg"),
+			}
+		elseif character.Humanoid.RigType == Enum.HumanoidRigType.R6 then
+			points = {
+				Head = character:WaitForChild("Head"),
+				Torso = character:WaitForChild("Torso"),
+				LeftArm = character:WaitForChild("Left Arm"),
+				RightArm = character:WaitForChild("Right Arm"),
+				LeftLeg = character:WaitForChild("Left Leg"),
+				RightLeg = character:WaitForChild("Right Leg"),
+			}
+		end
+
+		for i, v in pairs(points) do
+			local line = Instance.new("Frame")
+			line.Parent = skeletonFolder
+			line.Name = i
+		end
 	end
 end
 
@@ -408,9 +416,13 @@ function esplib.update()
 		
 		local _, onScreen, depth = worldToScreen(head.Position);
 		
+		if player == localPlayer and esplib.settings.renderself then
+
+		end
+		
 		if not onScreen then
 			main.Visible = false
-		else
+		elseif (player == localPlayer and esplib.settings.renderself) or player ~= localPlayer then
 			----- box and widgets
 			
 			local cache = {}
@@ -500,6 +512,8 @@ function esplib.update()
 			end
 			
 			----- box and widgets
+		else
+			main.Visible = false
 		end
 		
 		----- chams
@@ -507,20 +521,58 @@ function esplib.update()
 		local visiblechams = esplib.chamscontainer:FindFirstChild(player.Name) and esplib.chamscontainer:FindFirstChild(player.Name):FindFirstChild("chams")
 		local unvisiblechams = esplib.chamsmodels:FindFirstChild(player.Name) and esplib.chamsmodels:FindFirstChild(player.Name):FindFirstChild("chams")
 		
-		if visiblechams then
-			visiblechams.Enabled = espsetts.visibleChamsEnabled
-			visiblechams.FillColor = espsetts.visibleChamsFill[1]
-			visiblechams.FillTransparency = espsetts.visibleChamsFill[2]
-			visiblechams.OutlineColor = espsetts.visibleChamsOutline[1]
-			visiblechams.OutlineTransparency = espsetts.visibleChamsOutline[2]
-		end
-		
-		if unvisiblechams then
-			unvisiblechams.Enabled = espsetts.unvisibleChamsEnabled
-			unvisiblechams.FillColor = espsetts.unvisibleChamsFill[1]
-			unvisiblechams.FillTransparency = espsetts.unvisibleChamsFill[2]
-			unvisiblechams.OutlineColor = espsetts.unvisibleChamsOutline[1]
-			unvisiblechams.OutlineTransparency = espsetts.unvisibleChamsOutline[2]
+		if (player == localPlayer and esplib.settings.renderself) or player ~= localPlayer then
+			if visiblechams then
+				if (espsetts.visibleChamsEnabled and not espsetts.unvisibleChamsEnabled) or (espsetts.visibleChamsEnabled and espsetts.unvisibleChamsEnabled) then
+
+					visiblechams.Enabled = true
+					visiblechams.FillColor = espsetts.visibleChamsFill[1]
+					visiblechams.FillTransparency = espsetts.visibleChamsFill[2]
+					visiblechams.OutlineColor = espsetts.visibleChamsOutline[1]
+					visiblechams.OutlineTransparency = espsetts.visibleChamsOutline[2]
+					visiblechams.DepthMode = Enum.HighlightDepthMode.Occluded
+
+				elseif not espsetts.visibleChamsEnabled and not espsetts.unvisibleChamsEnabled then
+					visiblechams.Enabled = false
+				elseif not espsetts.visibleChamsEnabled and espsetts.unvisibleChamsEnabled then
+
+					visiblechams.Enabled = true
+					visiblechams.FillColor = espsetts.unvisibleChamsFill[1]
+					visiblechams.FillTransparency = espsetts.unvisibleChamsFill[2]
+					visiblechams.OutlineColor = espsetts.unvisibleChamsOutline[1]
+					visiblechams.OutlineTransparency = espsetts.unvisibleChamsOutline[2]
+					visiblechams.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+
+				end
+
+
+			end
+
+			if unvisiblechams then
+				if (espsetts.visibleChamsEnabled and espsetts.unvisibleChamsEnabled) then
+
+					unvisiblechams.Enabled = true
+					unvisiblechams.FillColor = espsetts.unvisibleChamsFill[1]
+					unvisiblechams.FillTransparency = espsetts.unvisibleChamsFill[2]
+					unvisiblechams.OutlineColor = espsetts.unvisibleChamsOutline[1]
+					unvisiblechams.OutlineTransparency = espsetts.unvisibleChamsOutline[2]
+					unvisiblechams.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+
+				elseif not espsetts.visibleChamsEnabled and not espsetts.unvisibleChamsEnabled then
+					unvisiblechams.Enabled = false
+				elseif espsetts.visibleChamsEnabled and not espsetts.unvisibleChamsEnabled then
+					unvisiblechams.Enabled = false
+				else
+					unvisiblechams.Enabled = false
+				end
+
+
+			end
+		else
+			pcall(function()
+				unvisiblechams.Enabled = false
+				visiblechams.Enabled = false
+			end)
 		end
 		
 		-- skeleton -------------------------------------------------------------
@@ -530,28 +582,34 @@ function esplib.update()
 		if skeletonfolder then
 			local connections = {}
 			
-			if character.Humanoid.RigType == Enum.HumanoidRigType.R15 then
-				connections = {
-					{'Head', 'UpperTorso'},
-					{'UpperTorso', 'LowerTorso'},
-					{'UpperTorso', 'LeftUpperArm'},
-					{'LeftUpperArm', 'LeftLowerArm'},
-					{'UpperTorso', 'RightUpperArm'},
-					{'RightUpperArm', 'RightLowerArm'},
-					{'LowerTorso', 'LeftUpperLeg'},
-					{'LeftUpperLeg', 'LeftLowerLeg'},
-					{'LowerTorso', 'RightUpperLeg'},
-					{'RightUpperLeg', 'RightLowerLeg'},
-				}
-			elseif character.Humanoid.RigType == Enum.HumanoidRigType.R6 then
-				connections = {
-					{'Head', 'Torso'},
-					{'Torso', 'LeftArm'},
-					{'Torso', 'RightArm'},
-					{'Torso', 'LeftLeg'},
-					{'Torso', 'RightLeg'},
-				}
-			end
+			local humexists = pcall(function()
+				return character.Humanoid
+			end)
+			
+			if humexists then
+				if character.Humanoid.RigType == Enum.HumanoidRigType.R15 then
+					connections = {
+						{'Head', 'UpperTorso'},
+						{'UpperTorso', 'LowerTorso'},
+						{'UpperTorso', 'LeftUpperArm'},
+						{'LeftUpperArm', 'LeftLowerArm'},
+						{'UpperTorso', 'RightUpperArm'},
+						{'RightUpperArm', 'RightLowerArm'},
+						{'LowerTorso', 'LeftUpperLeg'},
+						{'LeftUpperLeg', 'LeftLowerLeg'},
+						{'LowerTorso', 'RightUpperLeg'},
+						{'RightUpperLeg', 'RightLowerLeg'},
+					}
+				elseif character.Humanoid.RigType == Enum.HumanoidRigType.R6 then
+					connections = {
+						{'Head', 'Torso'},
+						{'Torso', 'LeftArm'},
+						{'Torso', 'RightArm'},
+						{'Torso', 'LeftLeg'},
+						{'Torso', 'RightLeg'},
+					}
+				end
+			end 
 			
 			for _, connection in ipairs(connections) do
 				local point1 = skeletonfolder:FindFirstChild(connection[1])
@@ -573,14 +631,15 @@ function esplib.update()
 							local screenPos1, onScreen1, depth1 = worldToScreen(part1.Position);
 							local screenPos2, onScreen2, depth2 = worldToScreen(part2.Position);
 
-							--if onScreen1 then
-
-							--end
-
-							drawLine(point2, screenPos1, screenPos2, espsetts.skeletonThickness)
-
-							point1.Visible = true
-							point2.Visible = true
+							if onScreen1 then
+								drawLine(point2, screenPos1, screenPos2, espsetts.skeletonThickness)
+								
+								point1.Visible = true and ((player == localPlayer and esplib.settings.renderself) or player ~= localPlayer)
+								point2.Visible = true and ((player == localPlayer and esplib.settings.renderself) or player ~= localPlayer)
+							else
+								point2.Visible = false
+							end
+							
 						else
 							point1.Visible = false			
 						end
@@ -593,6 +652,8 @@ function esplib.update()
 					end)
 				end
 			end
+			
+			connections = nil
 		end
 	end
 end
@@ -658,6 +719,10 @@ end
 
 -------------------------------
 
+--print('esp enabled')
 --esplib:Init()
+--wait(15)
+--esplib:Unload()
+--print('esp disabled')
 
 return esplib
