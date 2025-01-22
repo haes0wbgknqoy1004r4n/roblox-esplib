@@ -122,6 +122,8 @@ else
 	maincont = Instance.new("ScreenGui", gethui and gethui() or game:GetService("CoreGui"))
 end
 
+maincont.IgnoreGuiInset = true
+
 local esplib = {
 	container = Instance.new("Folder", maincont),
 	chamscontainer = Instance.new("Folder", maincont),
@@ -516,6 +518,6 @@ end
 
 -------------------------------
 
-esplib:Init()
+--esplib:Init()
 
 return esplib
